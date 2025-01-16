@@ -5,6 +5,6 @@ export const  errorMiddleware = (error:HttpExpection, req:Request, res:Response,
     res.status(error.statusCode).json({
         message:error.message,
         errorCode:error.errorCode,
-        errors:error.errors
+        errors:error.errors || null
     })
 }

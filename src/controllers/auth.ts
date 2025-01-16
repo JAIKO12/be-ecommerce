@@ -5,26 +5,36 @@ import  * as jwt from 'jsonwebtoken'
 import { JWT_SECRET } from "../secrets";
 import { BadRequestException } from "../exceptions/bad-request";
 import { ErrorCode } from "../exceptions/exceptions";
+import { UnprocessableEntityException } from "../exceptions/validation";
+import { SignUpSchema } from "../schema/users";
 
 export const signUp = async (req:Request, res:Response,next: NextFunction) => {
-  const {email, password, name} = req.body;
 
-  const user = await prisma.user.findFirst({where: {email}});
-  
-  if (user) {
-    next (new BadRequestException('User already exists', ErrorCode.USER_ALREADY_EXISTS));
+  try {
+    SignUpSchema.parse(req.body);
+    const {email, password, name} = req.body;
+
+    const user = await prisma.user.findFirst({where: {email}});
+    
+    if (user) {
+      next (new BadRequestException('User already exists', ErrorCode.USER_ALREADY_EXISTS));
+    } 
+    const response = await prisma.user.create({
+      data:{
+          email,
+          password:hashSync(password, 10),
+          name
+      }
+    })
+    res.status(200).json({
+      message:'Succsecfully created user',
+      data:response
+    })
+  } catch (err:any) {
+    const issues = err?.issues
+    console.log(issues);
+    next(new UnprocessableEntityException(issues, 'Unprocessabe entity',ErrorCode.UNPORCESSABLE_ENTITY ))
   }
-  const response = await prisma.user.create({
-    data:{
-        email,
-        password:hashSync(password, 10),
-        name
-    }
-  })
-  res.status(200).json({
-    message:'Succsecfully created user',
-    data:response
-  })
 };
 export const login = async (req:Request, res:Response) => {
   const {email, password} = req.body;
